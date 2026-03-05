@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SEINFRA/AM — Aeródromos do Amazonas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --azul:       #002D72;
+      --azul-h:     #00348A;
+      --azul-cl:    #EBF0FA;
+      --azul-brd:   #C4D0E8;
+      --amarelo:    #F5A623;
+      --amarelo-cl: #FEF3DC;
+      --roxo:       #7b2d8b;
+      --roxo-cl:    #f3e8ff;
+      --roxo-brd:   #d8b4fe;
+      --verde:      #007B3E;
+      --verde-cl:   #E6F4ED;
+      --cinza-txt:  #1A2540;
+      --cinza-med:  #4A5568;
+      --cinza-aux:  #8896A8;
+      --cinza-bg:   #F5F7FB;
+      --borda:      #E0E6F0;
+      --branco:     #FFFFFF;
+      --font:       'Outfit', sans-serif;
+      --sh:  0 2px 16px rgba(0,45,114,0.09), 0 0 0 1px var(--borda);
+      --sh-h:0 12px 40px rgba(0,45,114,0.16), 0 0 0 1px var(--azul-brd);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{font-family:var(--font);background:var(--cinza-bg);color:var(--cinza-txt);-webkit-font-smoothing:antialiased;}
+    a{text-decoration:none;color:inherit;}
+
+    /* TOPBAR */
+    .topbar{background:var(--azul);padding:.5rem 2rem;display:flex;align-items:center;justify-content:space-between;}
+    .topbar-l{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.55);font-weight:500;}
+    .topbar-r{font-size:.66rem;font-weight:700;color:var(--amarelo);letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:.45rem;}
+    .tp-dot{width:5px;height:5px;border-radius:50%;background:var(--amarelo);box-shadow:0 0 6px var(--amarelo);animation:pulse 2s ease-in-out infinite;}
+
+    /* HEADER */
+    .header{background:var(--branco);border-bottom:2px solid var(--azul);padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:500;box-shadow:0 2px 20px rgba(0,45,114,.08);}
+    .hbrand{display:flex;align-items:center;gap:.85rem;}
+    .hicon{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--roxo),#4a1060);display:flex;align-items:center;justify-content:center;font-size:1.3rem;}
+    .hsup{font-size:.62rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--cinza-aux);margin-bottom:.1rem;}
+    .hname{font-size:1.05rem;font-weight:800;color:var(--azul);}
+    .hname span{color:var(--roxo);}
+    .hright{display:flex;align-items:center;gap:.75rem;}
+    .hbadge{font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--roxo);background:var(--roxo-cl);border:1.5px solid var(--roxo-brd);padding:.35em .9em;border-radius:100px;}
+    .hback{font-size:.72rem;font-weight:600;color:var(--cinza-aux);display:flex;align-items:center;gap:.4rem;padding:.35em .85em;border-radius:100px;border:1.5px solid var(--borda);transition:all .2s;}
+    .hback:hover{border-color:var(--azul);color:var(--azul);}
+
+    /* HERO */
+    .hero{background:linear-gradient(135deg,#012a4a 0%,#0a1f5c 45%,#1a0a33 100%);padding:3.5rem 2rem 5rem;position:relative;overflow:hidden;}
+    .hero::before{content:'';position:absolute;inset:0;background-image:radial-gradient(ellipse at 80% 20%,rgba(123,45,139,.25) 0%,transparent 50%),radial-gradient(ellipse at 5% 90%,rgba(245,166,35,.08) 0%,transparent 40%),repeating-linear-gradient(-45deg,transparent,transparent 40px,rgba(123,45,139,.05) 40px,rgba(123,45,139,.05) 41px);pointer-events:none;}
+    .hero-in{position:relative;z-index:1;max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:2rem;}
+    .hchip{display:inline-flex;align-items:center;gap:.5rem;font-size:.65rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--amarelo);background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.25);padding:.4em 1em;border-radius:100px;margin-bottom:1.2rem;}
+    .hchip-dot{width:5px;height:5px;border-radius:50%;background:var(--amarelo);animation:pulse 2s infinite;}
+    .htitle{font-size:clamp(1.8rem,4vw,3.2rem);font-weight:900;color:var(--branco);letter-spacing:-.025em;line-height:1.1;margin-bottom:.75rem;}
+    .htitle em{font-style:normal;color:#c084fc;}
+    .hsub{font-size:.95rem;color:rgba(255,255,255,.6);line-height:1.6;max-width:480px;}
+    .hstats{display:flex;gap:2rem;flex-wrap:wrap;}
+    .hstat-val{font-size:2.4rem;font-weight:900;color:var(--branco);letter-spacing:-.03em;line-height:1;}
+    .hstat-val .a1{color:var(--amarelo);}
+    .hstat-val .a2{color:#c084fc;}
+    .hstat-lbl{font-size:.63rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-top:.25rem;}
+    .hwave{position:absolute;bottom:-1px;left:0;width:100%;z-index:2;}
+    .hwave svg{display:block;width:100%;}
+
+    /* WRAP */
+    .wrap{max-width:1200px;margin:0 auto;padding:2rem 2rem 5rem;}
+
+    /* FILTRO PRINCIPAL */
+    .main-filter{background:var(--branco);border-radius:16px;box-shadow:var(--sh);padding:1.5rem;margin-bottom:1.75rem;}
+    .mf-label{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cinza-aux);margin-bottom:1rem;}
+    .mf-tabs{display:flex;gap:.75rem;flex-wrap:wrap;}
+    .mf-tab{display:flex;align-items:center;gap:.7rem;padding:.8rem 1.4rem;border-radius:12px;border:2px solid var(--borda);background:var(--cinza-bg);cursor:pointer;transition:all .22s;flex:1;min-width:220px;}
+    .mf-tab:hover{border-color:var(--roxo-brd);background:var(--roxo-cl);}
+    .mf-tab.active{border-color:var(--roxo);background:var(--roxo-cl);box-shadow:0 0 0 4px rgba(123,45,139,.08);}
+    .mf-tab-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;}
+    .mf-tab-icon.pub{background:var(--azul-cl);}
+    .mf-tab-icon.est{background:var(--roxo-cl);}
+    .mf-tab-body{}
+    .mf-tab-title{font-size:.88rem;font-weight:800;color:var(--azul);margin-bottom:.15rem;}
+    .mf-tab.active .mf-tab-title{color:var(--roxo);}
+    .mf-tab-sub{font-size:.72rem;color:var(--cinza-aux);}
+    .mf-tab-count{margin-left:auto;font-size:1.3rem;font-weight:900;color:var(--cinza-aux);}
+    .mf-tab.active .mf-tab-count{color:var(--roxo);}
+
+    /* BUSCA + CONTAGEM */
+    .toolbar{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem;}
+    .search-wrap{position:relative;flex:1;min-width:200px;max-width:300px;}
+    .search-wrap input{font-family:var(--font);font-size:.82rem;width:100%;padding:.5rem .85rem .5rem 2.1rem;border:1.5px solid var(--borda);border-radius:8px;outline:none;color:var(--cinza-txt);background:var(--branco);transition:all .2s;}
+    .search-wrap input:focus{border-color:var(--roxo);box-shadow:0 0 0 3px rgba(123,45,139,.1);}
+    .s-icon{position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:.8rem;color:var(--cinza-aux);pointer-events:none;}
+    .f-count{font-size:.72rem;font-weight:600;color:var(--cinza-aux);}
+    .f-count span{color:var(--roxo);font-weight:800;}
+    .sub-filters{display:flex;gap:.5rem;flex-wrap:wrap;}
+    .sf-btn{font-family:var(--font);font-size:.72rem;font-weight:700;padding:.38em .9em;border-radius:100px;border:1.5px solid var(--borda);background:var(--branco);color:var(--cinza-med);cursor:pointer;transition:all .2s;}
+    .sf-btn:hover{border-color:var(--roxo);color:var(--roxo);}
+    .sf-btn.active{background:var(--roxo);color:var(--branco);border-color:var(--roxo);}
+
+    /* MAPA */
+    .map-box{background:var(--branco);border-radius:16px;box-shadow:var(--sh);overflow:hidden;margin-bottom:1.75rem;}
+    .map-hdr{padding:1.1rem 1.5rem .75rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;}
+    .map-ttl{font-size:.73rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cinza-med);}
+    .map-leg{display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;}
+    .leg-i{display:flex;align-items:center;gap:.4rem;font-size:.69rem;font-weight:600;color:var(--cinza-aux);}
+    .leg-dot{width:10px;height:10px;border-radius:50%;}
+    #mapa{height:420px;}
+
+    /* CHARTS ROW */
+    .charts-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-bottom:1.75rem;}
+    .chart-box{background:var(--branco);border-radius:14px;box-shadow:var(--sh);padding:1.25rem;}
+    .chart-ttl{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cinza-aux);margin-bottom:1rem;}
+    .chart-canvas-wrap{position:relative;height:180px;}
+
+    /* GRID CARDS */
+    .aero-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;}
+
+    .card{background:var(--branco);border-radius:14px;box-shadow:var(--sh);overflow:hidden;transition:box-shadow .25s,transform .25s;cursor:pointer;position:relative;}
+    .card:hover{box-shadow:var(--sh-h);transform:translateY(-4px);}
+    .card.hidden{display:none;}
+
+    .card-stripe{height:4px;}
+    .card-stripe.estado{background:linear-gradient(90deg,var(--roxo),#4a1060);}
+    .card-stripe.publico{background:linear-gradient(90deg,var(--azul),#00348A);}
+
+    .card-top{padding:1.1rem 1.25rem .8rem;display:flex;align-items:flex-start;gap:.85rem;border-bottom:1px solid var(--borda);}
+    .card-ico{width:44px;height:44px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem;}
+    .card-ico.estado{background:linear-gradient(135deg,var(--roxo-cl),#e9d5ff);}
+    .card-ico.publico{background:var(--azul-cl);}
+
+    .card-nome{font-size:.88rem;font-weight:700;color:var(--azul);letter-spacing:-.01em;margin-bottom:.2rem;}
+    .card-mun{font-size:.72rem;color:var(--cinza-aux);font-weight:500;}
+    .card-badges{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.4rem;}
+
+    .badge{font-size:.6rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:.18em .6em;border-radius:100px;}
+    .badge-est{background:var(--roxo-cl);color:var(--roxo);border:1px solid var(--roxo-brd);}
+    .badge-pub{background:var(--azul-cl);color:var(--azul);border:1px solid var(--azul-brd);}
+    .badge-vfr{background:#fef9c3;color:#a16207;border:1px solid #fde68a;}
+    .badge-ifr{background:#fce7f3;color:#9d174d;border:1px solid #fbcfe8;}
+    .badge-ap2{background:#fef3c7;color:#92400e;border:1px solid #fde68a;}
+    .badge-ap1{background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;}
+    .badge-ap0{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;}
+
+    .card-specs{padding:.85rem 1.25rem;display:grid;grid-template-columns:1fr 1fr;gap:.45rem;}
+    .spec-lbl{font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cinza-aux);margin-bottom:.08rem;}
+    .spec-val{font-size:.8rem;font-weight:700;color:var(--cinza-txt);}
+
+    .card-foot{padding:.65rem 1.25rem;border-top:1px solid var(--borda);background:var(--cinza-bg);display:flex;align-items:center;justify-content:space-between;}
+    .card-ciad{font-size:.63rem;font-weight:700;letter-spacing:.12em;color:var(--cinza-aux);font-family:monospace;}
+    .card-link{font-size:.68rem;font-weight:700;color:var(--roxo);display:flex;align-items:center;gap:.3rem;transition:gap .2s;}
+    .card-link:hover{gap:.5rem;}
+
+    /* NO RESULTS */
+    .no-res{display:none;text-align:center;padding:4rem 2rem;color:var(--cinza-aux);}
+    .no-res.show{display:block;}
+
+    /* MODAL */
+    .modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(5px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .25s;}
+    .modal-ov.open{opacity:1;pointer-events:all;}
+    .modal{background:var(--branco);border-radius:20px;width:100%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 30px 80px rgba(0,0,114,.25);transform:translateY(20px);transition:transform .25s;}
+    .modal-ov.open .modal{transform:none;}
+    .modal-hdr{padding:2rem;position:relative;}
+    .modal-hdr.estado{background:linear-gradient(135deg,#1a0a33,#3b0764);}
+    .modal-hdr.publico{background:linear-gradient(135deg,#002D72,#00348A);}
+    .mcls{position:absolute;top:1rem;right:1rem;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);border:none;color:white;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+    .mcls:hover{background:rgba(255,255,255,.22);}
+    .m-icao-row{display:flex;align-items:center;gap:.6rem;margin-bottom:.85rem;}
+    .m-icao{font-size:.7rem;font-weight:900;letter-spacing:.18em;color:rgba(255,255,255,.5);font-family:monospace;}
+    .m-icao-sep{width:1px;height:14px;background:rgba(255,255,255,.2);}
+    .m-ciad{font-size:.7rem;font-weight:700;letter-spacing:.1em;color:rgba(255,255,255,.4);font-family:monospace;}
+    .m-title{font-size:1.6rem;font-weight:900;color:var(--branco);letter-spacing:-.02em;margin-bottom:.25rem;}
+    .m-mun{font-size:.82rem;color:rgba(255,255,255,.6);margin-bottom:.9rem;}
+    .m-badges{display:flex;gap:.5rem;flex-wrap:wrap;}
+    .mbody{padding:1.75rem;}
+    .ms-title{font-size:.63rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--cinza-aux);margin-bottom:.8rem;margin-top:1.2rem;padding-bottom:.35rem;border-bottom:1px solid var(--borda);}
+    .ms-title:first-child{margin-top:0;}
+    .mg{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;}
+    .mg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.8rem;}
+    .mf-lbl{font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cinza-aux);margin-bottom:.15rem;}
+    .mf-val{font-size:.88rem;font-weight:600;color:var(--cinza-txt);}
+    .mf-val.mono{font-family:monospace;font-size:.82rem;}
+    .m-obs{margin-top:.75rem;padding:.9rem 1rem;background:var(--cinza-bg);border-radius:10px;font-size:.78rem;color:var(--cinza-med);line-height:1.65;border-left:3px solid var(--amarelo);}
+    .m-portaria{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:700;color:var(--roxo);padding:.5em 1.1em;border-radius:8px;background:var(--roxo-cl);border:1.5px solid var(--roxo-brd);margin-top:.75rem;transition:all .2s;}
+    .m-portaria:hover{background:var(--roxo);color:var(--branco);}
+    .m-portaria.pub{color:var(--azul);background:var(--azul-cl);border-color:var(--azul-brd);}
+    .m-portaria.pub:hover{background:var(--azul);color:var(--branco);}
+
+    /* PISTA VISUAL */
+    .pista-vis{margin:1rem 0;padding:1rem;background:var(--cinza-bg);border-radius:10px;}
+    .pista-bar-wrap{height:28px;background:#dde3ef;border-radius:6px;overflow:hidden;position:relative;margin-bottom:.5rem;}
+    .pista-bar{height:100%;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:800;color:white;letter-spacing:.05em;transition:width .8s ease;}
+    .pista-lbl{display:flex;justify-content:space-between;font-size:.65rem;color:var(--cinza-aux);font-weight:600;}
+    .pista-desig{font-size:.7rem;font-weight:700;color:var(--cinza-med);text-align:center;margin-bottom:.3rem;}
+
+    /* FOOTER */
+    .footer{background:var(--azul);padding:2rem;}
+    .footer-in{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
+    .f-ico{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:1rem;}
+    .f-name{font-size:.9rem;font-weight:800;color:var(--branco);}
+    .f-name span{color:var(--amarelo);}
+    .f-sub{font-size:.65rem;color:rgba(255,255,255,.45);margin-top:.1rem;}
+    .f-copy{font-size:.68rem;color:rgba(255,255,255,.4);}
+
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.85);}}
+    @keyframes up{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+    .fade-in{animation:up .38s ease forwards;}
+
+    @media(max-width:1024px){.aero-grid{grid-template-columns:repeat(2,1fr);}.charts-row{grid-template-columns:1fr 1fr;}}
+    @media(max-width:700px){.aero-grid{grid-template-columns:1fr;}.charts-row{grid-template-columns:1fr;}.mg{grid-template-columns:1fr;}.mg3{grid-template-columns:1fr 1fr;}.hstats{gap:1.25rem;}.wrap{padding:1.5rem 1rem 4rem;}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-l">Governo do Estado do Amazonas</div>
+  <div class="topbar-r"><div class="tp-dot"></div>SEINFRA · Aeroviário</div>
+</div>
+
+<header class="header">
+  <div class="hbrand">
+    <div class="hicon">✈️</div>
+    <div>
+      <div class="hsup">Secretaria de Estado de Infraestrutura</div>
+      <div class="hname">Aeródromos<span>/AM</span></div>
+    </div>
+  </div>
+  <div class="hright">
+    <div class="hbadge">Aeroviário</div>
+    <a class="hback" href="https://leonzordhue.github.io/dmob-am/">← Painel</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-in">
+    <div>
+      <div class="hchip"><span class="hchip-dot"></span>Sistema Aeroviário — Amazonas</div>
+      <h1 class="htitle">Aeródromos do<br><em>Amazonas</em></h1>
+      <p class="hsub">Inventário técnico completo dos aeródromos públicos do Amazonas. Outorgas, especificações operacionais ANAC, classes RBAC 107/153 e normativos vigentes.</p>
+    </div>
+    <div class="hstats">
+      <div>
+        <div class="hstat-val"><span class="a1">22</span></div>
+        <div class="hstat-lbl">Aeródromos Públicos</div>
+      </div>
+      <div>
+        <div class="hstat-val"><span class="a2">7</span></div>
+        <div class="hstat-lbl">Gestão SEINFRA</div>
+      </div>
+      <div>
+        <div class="hstat-val"><span class="a1">100%</span></div>
+        <div class="hstat-lbl">Amazônia Legal</div>
+      </div>
+    </div>
+  </div>
+  <div class="hwave">
+    <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
+      <path d="M0,30 C360,55 720,5 1080,30 C1260,44 1380,20 1440,30 L1440,50 L0,50 Z" fill="#F5F7FB"/>
+    </svg>
+  </div>
+</section>
+
+<div class="wrap">
+
+  <!-- FILTRO PRINCIPAL -->
+  <div class="main-filter">
+    <div class="mf-label">Selecione o conjunto de aeródromos</div>
+    <div class="mf-tabs">
+      <div class="mf-tab active" data-view="publico" onclick="setView('publico')">
+        <div class="mf-tab-icon pub">🌐</div>
+        <div class="mf-tab-body">
+          <div class="mf-tab-title">Aeródromos Públicos</div>
+          <div class="mf-tab-sub">Todos os aeródromos públicos do Amazonas (ANAC)</div>
+        </div>
+        <div class="mf-tab-count">22</div>
+      </div>
+      <div class="mf-tab" data-view="estado" onclick="setView('estado')">
+        <div class="mf-tab-icon est">🏛️</div>
+        <div class="mf-tab-body">
+          <div class="mf-tab-title">Aeródromos Públicos / Estado</div>
+          <div class="mf-tab-sub">Sob gestão direta da SEINFRA/AM</div>
+        </div>
+        <div class="mf-tab-count">7</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAPA -->
+  <div class="map-box">
+    <div class="map-hdr">
+      <div class="map-ttl">✈ Distribuição Geográfica — Estado do Amazonas</div>
+      <div class="map-leg">
+        <div class="leg-i"><div class="leg-dot" style="background:#7b2d8b"></div>SEINFRA/Estado</div>
+        <div class="leg-i"><div class="leg-dot" style="background:#002D72"></div>Público</div>
+        <div class="leg-i"><div class="leg-dot" style="background:#f59e0b"></div>IFR</div>
+      </div>
+    </div>
+    <div id="mapa"></div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-row">
+    <div class="chart-box">
+      <div class="chart-ttl">Comprimento de Pista (m)</div>
+      <div class="chart-canvas-wrap"><canvas id="chartPista"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <div class="chart-ttl">Classe RBAC 107</div>
+      <div class="chart-canvas-wrap"><canvas id="chartRbac"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <div class="chart-ttl">Tipo de Operação</div>
+      <div class="chart-canvas-wrap"><canvas id="chartOp"></canvas></div>
+    </div>
+  </div>
+
+  <!-- BUSCA + SUBFILTROS -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="s-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Buscar nome ou município…"/>
+    </div>
+    <div class="sub-filters" id="subFilters"></div>
+    <div class="f-count"><span id="countNum">—</span> aeródromos</div>
+  </div>
+
+  <!-- GRID -->
+  <div class="aero-grid" id="aeroGrid"></div>
+  <div class="no-res" id="noRes">Nenhum aeródromo encontrado.</div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-ov" id="modalOv">
+  <div class="modal" id="modal">
+    <div class="modal-hdr" id="mHdr">
+      <button class="mcls" id="mcls">✕</button>
+      <div class="m-icao-row">
+        <span class="m-icao" id="mIcao"></span>
+        <div class="m-icao-sep" id="mSep"></div>
+        <span class="m-ciad" id="mCiad"></span>
+      </div>
+      <div class="m-title" id="mTitle"></div>
+      <div class="m-mun" id="mMun"></div>
+      <div class="m-badges" id="mBadges"></div>
+    </div>
+    <div class="mbody" id="mBody"></div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="footer-in">
+    <div style="display:flex;align-items:center;gap:.75rem;">
+      <div class="f-ico">✈️</div>
+      <div>
+        <div class="f-name">SEINFRA<span>/AM</span></div>
+        <div class="f-sub">Secretaria de Estado de Infraestrutura — Amazonas</div>
+      </div>
+    </div>
+    <div class="f-copy">Aeroviário · Manaus, AM · 2026</div>
+  </div>
+</footer>
+
+<script>
+const TODOS = [
+  {icao:"SBMY",ciad:"AM0015",nome:"MANICORÉ",municipio:"MANICORÉ",lat:-5.81111,lon:-61.27833,altitude:"53 m",operacao:"VFR Diurno",pista_desig:"05/23",comprimento:"1265 m",largura:"30 m",resistencia:"PCR 90/F/D/X/T",superficie:"Asfalto",portaria:"PA2022-9831",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"ESTADO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2022-9831.pdf"},
+  {icao:"SWBC",ciad:"AM0017",nome:"BARCELOS",municipio:"BARCELOS",lat:-0.98111,lon:-62.91944,altitude:"34 m",operacao:"VFR Diurno",pista_desig:"09/27",comprimento:"1500 m",largura:"30 m",resistencia:"PCN 17/F/B/Y/T",superficie:"Asfalto",portaria:"PA2022-9172",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"Portaria n° 15.059/2024 revogação de medida cautelar de proibição de operações ao aeródromo público Barcelos, CIAD AM0017.",fonte:"ESTADO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2022-9172.pdf"},
+  {icao:"SWCA",ciad:"AM0007",nome:"CARAUARI",municipio:"CARAUARI",lat:-4.87139,lon:-66.8975,altitude:"108 m",operacao:"VFR Diurno",pista_desig:"04/22",comprimento:"1665 m",largura:"18 m",resistencia:"PCN 12/F/C/Y/T",superficie:"Asfalto",portaria:"PA2017-3045",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"4ª",aeronave:"",observacoes:"",fonte:"ESTADO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2017-3045.pdf"},
+  {icao:"SWEI",ciad:"AM0009",nome:"EIRUNEPÉ",municipio:"EIRUNEPÉ",lat:-6.63944,lon:-69.87972,altitude:"127 m",operacao:"VFR Diurno",pista_desig:"16/34",comprimento:"2210 m",largura:"45 m",resistencia:"PCN 30/F/C/X/U",superficie:"Asfalto",portaria:"PA2023-10.757",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"Portaria n° 15.308/2024/SIA revogação de medida administrativa cautelar ao aeródromo público de Eirunepé, CIAD AM0009.",fonte:"ESTADO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2023-10.757.pdf"},
+  {icao:"SWMW",ciad:"AM0020",nome:"MAUÉS",municipio:"MAUÉS",lat:-3.37194,lon:-57.72472,altitude:"21 m",operacao:"VFR Diurno",pista_desig:"01/19",comprimento:"1200 m",largura:"30 m",resistencia:"PCN 11/F/B/Y/T",superficie:"Asfalto",portaria:"PA2022-9655",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"ESTADO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2022-9655.pdf"},
+  {icao:"SWOB",ciad:"AM0014",nome:"FONTE BOA",municipio:"FONTE BOA",lat:-2.5325,lon:-66.08333,altitude:"63 m",operacao:"VFR Diurno",pista_desig:"18/36",comprimento:"1300 m",largura:"24 m",resistencia:"PCR 40/R/B/Z/T",superficie:"Asfalto",portaria:"PA2023-11.691",rbac107:"AP-0",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"Portaria SIA n° 15.500/2024 revogação de medida cautelar de proibição de operações na pista 18/36, exceto emergências médicas.",fonte:"ESTADO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2023-11.691.pdf"},
+  {icao:"SWII",ciad:"AM0013",nome:"IPIRANGA",municipio:"SANTO ANTÔNIO DO IÇÁ",lat:-2.94028,lon:-69.69417,altitude:"67 m",operacao:"VFR Diurno",pista_desig:"01/19",comprimento:"1500 m",largura:"30 m",resistencia:"PCN 13/R/C/W/U",superficie:"Concreto",portaria:"PA2023-10.581",rbac107:"AP-0",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"ESTADO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2023-10.581.pdf"},
+  {icao:"",ciad:"",nome:"LÁBREA",municipio:"LÁBREA",lat:-7.27889,lon:-64.76944,altitude:"74 m",operacao:"VFR Diurno",pista_desig:"18/36",comprimento:"1200 m",largura:"30 m",resistencia:"PCN 8/F/C/Y/T",superficie:"Asfalto",portaria:"PA2020-3249",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2020-3249.pdf"},
+  {icao:"",ciad:"",nome:"EDUARDO GOMES",municipio:"MANAUS",lat:-3.04111,lon:-60.05056,altitude:"80 m",operacao:"VFR Diurno/Noturno e IFR Diurno/Noturno",pista_desig:"11/29",comprimento:"2700 m",largura:"45 m",resistencia:"PCR 860/F/A/X/T",superficie:"Asfalto",portaria:"PA2022-7517",rbac107:"AP-2",rbac153:"Classe III",cat_tar:"1ª",aeronave:"4E",observacoes:"Maior aeródromo do Estado do Amazonas. Operações IFR diurnas e noturnas. Aeronave crítica código 4E.",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2022-7517.pdf"},
+  {icao:"",ciad:"",nome:"ITACOATIARA",municipio:"ITACOATIARA",lat:-3.12639,lon:-58.48167,altitude:"43 m",operacao:"VFR Diurno",pista_desig:"14/32",comprimento:"1520 m",largura:"30 m",resistencia:"PCN 10/F/A/Y/T",superficie:"Asfalto",portaria:"PA2018-2359",rbac107:"AP-0",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2018-2359.pdf"},
+  {icao:"",ciad:"",nome:"PREFEITO ORLANDO MARINHO",municipio:"TEFÉ",lat:-3.38028,lon:-64.72528,altitude:"57 m",operacao:"VFR Diurno/Noturno e IFR Diurno/Noturno",pista_desig:"15/33",comprimento:"2000 m",largura:"45 m",resistencia:"PCR 360/F/C/X/T",superficie:"Asfalto",portaria:"PA2022-9830",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"2ª",aeronave:"3C",observacoes:"",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2022-9830.pdf"},
+  {icao:"",ciad:"",nome:"TABATINGA",municipio:"TABATINGA",lat:-4.25056,lon:-69.93778,altitude:"80 m",operacao:"VFR Diurno/Noturno e IFR Diurno/Noturno",pista_desig:"12/30",comprimento:"2150 m",largura:"33 m",resistencia:"PCR 330/F/A/X/T",superficie:"Asfalto",portaria:"PA2021-4744",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"2ª",aeronave:"",observacoes:"",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2021-4744.pdf"},
+  {icao:"",ciad:"",nome:"SÃO GABRIEL DA CACHOEIRA",municipio:"SÃO GABRIEL DA CACHOEIRA",lat:-0.14806,lon:-66.98583,altitude:"76 m",operacao:"VFR Diurno e IFR Diurno",pista_desig:"05/23",comprimento:"2600 m",largura:"45 m",resistencia:"PCR 280/F/C/X/T",superficie:"Asfalto",portaria:"PA2020-1183",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2020-1183.pdf"},
+  {icao:"",ciad:"",nome:"SENADORA EUNICE MICHILES",municipio:"SÃO PAULO DE OLIVENÇA",lat:-3.46917,lon:-68.92111,altitude:"102 m",operacao:"VFR Diurno",pista_desig:"04/22",comprimento:"1200 m",largura:"23 m",resistencia:"PCN 6/R/B/Y/T",superficie:"Concreto",portaria:"PA2022-6999",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2022-6999.pdf"},
+  {icao:"",ciad:"",nome:"BORBA",municipio:"BORBA",lat:-4.40611,lon:-59.6025,altitude:"30 m",operacao:"VFR Diurno",pista_desig:"12/30",comprimento:"1200 m",largura:"23 m",resistencia:"PCN 8/F/C/Y/U",superficie:"Asfalto",portaria:"PA2023-11.217",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2023-11.217.pdf"},
+  {icao:"",ciad:"",nome:"FLORES",municipio:"MANAUS",lat:-3.07278,lon:-60.02111,altitude:"62 m",operacao:"VFR Diurno",pista_desig:"11/29",comprimento:"799 m",largura:"30 m",resistencia:"5700 kg/0,5 MPa",superficie:"Asfalto",portaria:"PA2017-1581",rbac107:"AP-0",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2017-1581.pdf"},
+  {icao:"SWII",ciad:"AM0013",nome:"IPIRANGA",municipio:"SANTO ANTÔNIO DO IÇÁ",lat:-2.94028,lon:-69.69417,altitude:"67 m",operacao:"VFR Diurno",pista_desig:"01/19",comprimento:"1500 m",largura:"30 m",resistencia:"PCN 13/R/C/W/U",superficie:"Concreto",portaria:"PA2023-10.581",rbac107:"AP-0",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"ESTADO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2023-10.581.pdf"},
+  {icao:"",ciad:"",nome:"COARI",municipio:"COARI",lat:-4.13417,lon:-63.1325,altitude:"40 m",operacao:"VFR Diurno",pista_desig:"10/28",comprimento:"1600 m",largura:"36 m",resistencia:"PCN 29/F/C/X/U",superficie:"Asfalto",portaria:"PA2023-11.806",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"4ª",aeronave:"",observacoes:"",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2023-11.806.pdf"},
+  {icao:"",ciad:"",nome:"HUMAITÁ",municipio:"HUMAITÁ",lat:-7.53472,lon:-63.07222,altitude:"70 m",operacao:"VFR Diurno",pista_desig:"14/32",comprimento:"1520 m",largura:"30 m",resistencia:"PCN 7/F/B/Y/U",superficie:"Asfalto",portaria:"PA2023-11.585",rbac107:"AP-0",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2023-11.585.pdf"},
+  {icao:"",ciad:"",nome:"NOVO CAMPO",municipio:"BOCA DO ACRE",lat:-8.83472,lon:-67.3125,altitude:"120 m",operacao:"VFR Diurno",pista_desig:"18/36",comprimento:"1600 m",largura:"30 m",resistencia:"PCN 19/F/C/Y/U",superficie:"Asfalto",portaria:"PA2021-4603",rbac107:"AP-0",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2021-4603.pdf"},
+  {icao:"",ciad:"",nome:"PARINTINS",municipio:"PARINTINS",lat:-2.67361,lon:-56.7775,altitude:"25 m",operacao:"VFR Diurno/Noturno",pista_desig:"06/24",comprimento:"1801 m",largura:"30 m",resistencia:"PCN 33/F/B/X/T",superficie:"Asfalto",portaria:"PA2023-11.746",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"3ª",aeronave:"",observacoes:"Portaria SIA n° 16.828/2025 suspensão de medida administrativa cautelar ao aeródromo de Parintins, CIAD AM0006, OACI SWPI.",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2023-11.746.pdf"},
+  {icao:"",ciad:"",nome:"SANTA ISABEL DO RIO NEGRO",municipio:"SANTA ISABEL DO RIO NEGRO",lat:-0.37861,lon:-64.99306,altitude:"68 m",operacao:"VFR Diurno",pista_desig:"09/27",comprimento:"1200 m",largura:"30 m",resistencia:"PCN 50/F/D/X/T",superficie:"Asfalto",portaria:"PA2022-8873",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2022-8873.pdf"},
+  {icao:"",ciad:"",nome:"APUÍ",municipio:"APUÍ",lat:-7.17222,lon:-59.83889,altitude:"60 m",operacao:"VFR Diurno",pista_desig:"08/26",comprimento:"1200 m",largura:"23 m",resistencia:"PCN 12/F/B/Y/U",superficie:"Asfalto",portaria:"PA2020-1745",rbac107:"AP-1",rbac153:"Classe I",cat_tar:"",aeronave:"",observacoes:"",fonte:"PÚBLICO",portaria_link:"https://pergamum.anac.gov.br/arquivos/PA2020-1745.pdf"}
+];
+
+// Remove duplicate IPIRANGA (appears twice due to crossover)
+const seen = new Set();
+const DATA_ALL = TODOS.filter(a => { const k=a.nome+a.municipio; if(seen.has(k)) return false; seen.add(k); return true; });
+const DATA_EST = DATA_ALL.filter(a => a.fonte === 'ESTADO');
+
+let viewMode = 'publico';
+let buscaAtiva = '';
+let subFiltro = 'todos';
+let charts = {};
+let marcadores_pub = [];
+let marcadores_est = [];
+
+// ── MAPA ──
+const mapa = L.map('mapa', {center:[-4.0,-63.0], zoom:5});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {attribution:'© CartoDB', maxZoom:18}).addTo(mapa);
+
+function makeIcon(cor, size=30) {
+  return L.divIcon({
+    className:'',
+    html:`<div style="width:${size}px;height:${size}px;border-radius:50%;background:${cor};border:3px solid white;box-shadow:0 3px 12px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:${size*.45}px;color:white;">✈</div>`,
+    iconSize:[size,size], iconAnchor:[size/2,size/2], popupAnchor:[0,-size/2]
+  });
+}
+
+function corAero(a) {
+  if(a.operacao && a.operacao.includes('IFR')) return '#f59e0b';
+  if(a.fonte==='ESTADO') return '#7b2d8b';
+  return '#002D72';
+}
+
+DATA_ALL.forEach((a,i) => {
+  const m = L.marker([a.lat,a.lon], {icon: makeIcon(corAero(a))}).addTo(mapa);
+  m.bindPopup(`<div style="font-family:'Outfit',sans-serif;min-width:180px;">
+    <b style="color:#002D72;font-size:.88rem;">${a.nome}</b><br>
+    <span style="font-size:.72rem;color:#666">📍 ${a.municipio}</span><br>
+    <span style="font-size:.65rem;color:#888;font-family:monospace">${a.pista_desig} · ${a.comprimento} · ${a.rbac107}</span>
+  </div>`);
+  m.on('click', () => abrirModal(DATA_ALL.indexOf(a)));
+  (a.fonte==='ESTADO' ? marcadores_est : marcadores_pub).push({m, a});
+});
+
+// ── CHARTS ──
+function getDataAtual() { return viewMode==='estado' ? DATA_EST : DATA_ALL; }
+
+function buildCharts() {
+  const data = getDataAtual();
+
+  // Chart 1: Pista bar horizontal
+  const sorted = [...data].sort((a,b) => parseInt(b.comprimento)-parseInt(a.comprimento));
+  const labels = sorted.map(a => a.nome.length>12 ? a.nome.substring(0,12)+'…' : a.nome);
+  const valores = sorted.map(a => parseInt(a.comprimento)||0);
+  const cores = sorted.map(a => a.fonte==='ESTADO' ? 'rgba(123,45,139,.75)' : 'rgba(0,45,114,.65)');
+
+  if(charts.pista) charts.pista.destroy();
+  charts.pista = new Chart(document.getElementById('chartPista'), {
+    type:'bar',
+    data:{labels, datasets:[{data:valores, backgroundColor:cores, borderRadius:4, borderSkipped:false}]},
+    options:{indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>`${c.raw.toLocaleString()} m`}}},
+      scales:{x:{grid:{color:'rgba(0,0,0,.05)'}, ticks:{font:{size:9},callback:v=>v+'m'}}, y:{ticks:{font:{size:8}}}}
+    }
+  });
+
+  // Chart 2: RBAC107 donut
+  const rbacCount = {};
+  data.forEach(a => { const r=a.rbac107||'—'; rbacCount[r]=(rbacCount[r]||0)+1; });
+  const rbacLabels = Object.keys(rbacCount);
+  const rbacCores = {'AP-2':'#7b2d8b','AP-1':'#002D72','AP-0':'#007B3E','—':'#8896A8'};
+
+  if(charts.rbac) charts.rbac.destroy();
+  charts.rbac = new Chart(document.getElementById('chartRbac'), {
+    type:'doughnut',
+    data:{labels:rbacLabels, datasets:[{data:Object.values(rbacCount), backgroundColor:rbacLabels.map(l=>rbacCores[l]||'#ccc'), borderWidth:2, borderColor:'#fff'}]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom', labels:{font:{size:9}, boxWidth:10}},
+      tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} aeródromo${c.raw>1?'s':''}`}}}
+    }
+  });
+
+  // Chart 3: Operação donut
+  const opCount = {'VFR Diurno':0,'VFR Not./IFR':0,'Outros':0};
+  data.forEach(a => {
+    const op = a.operacao||'';
+    if(op.includes('IFR')) opCount['VFR Not./IFR']++;
+    else if(op.includes('VFR Diurno')) opCount['VFR Diurno']++;
+    else opCount['Outros']++;
+  });
+  if(charts.op) charts.op.destroy();
+  charts.op = new Chart(document.getElementById('chartOp'), {
+    type:'doughnut',
+    data:{labels:Object.keys(opCount), datasets:[{data:Object.values(opCount), backgroundColor:['#002D72','#f59e0b','#007B3E'], borderWidth:2, borderColor:'#fff'}]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom', labels:{font:{size:9}, boxWidth:10}}}
+    }
+  });
+}
+
+// ── SUBFILTROS ──
+function buildSubFilters() {
+  const data = getDataAtual();
+  const rbacs = [...new Set(data.map(a=>a.rbac107||'—'))].sort();
+  const container = document.getElementById('subFilters');
+  container.innerHTML = `<button class="sf-btn ${subFiltro==='todos'?'active':''}" onclick="setSub('todos')">Todos</button>` +
+    rbacs.map(r=>`<button class="sf-btn ${subFiltro===r?'active':''}" onclick="setSub('${r}')">${r}</button>`).join('') +
+    `<button class="sf-btn ${subFiltro==='ifr'?'active':''}" onclick="setSub('ifr')">IFR</button>`;
+}
+
+function setSub(v) { subFiltro=v; buildSubFilters(); renderCards(); }
+
+// ── RENDER CARDS ──
+function renderCards() {
+  const data = getDataAtual();
+  let lista = data;
+
+  if(subFiltro !== 'todos') {
+    if(subFiltro === 'ifr') lista = lista.filter(a => a.operacao && a.operacao.includes('IFR'));
+    else lista = lista.filter(a => (a.rbac107||'—') === subFiltro);
+  }
+
+  if(buscaAtiva) {
+    const t = buscaAtiva.toLowerCase();
+    lista = lista.filter(a => a.nome.toLowerCase().includes(t) || a.municipio.toLowerCase().includes(t) || (a.icao||'').toLowerCase().includes(t));
+  }
+
+  document.getElementById('countNum').textContent = lista.length;
+  const noRes = document.getElementById('noRes');
+
+  if(!lista.length) {
+    document.getElementById('aeroGrid').innerHTML='';
+    noRes.classList.add('show'); return;
+  }
+  noRes.classList.remove('show');
+
+  document.getElementById('aeroGrid').innerHTML = lista.map((a,idx) => {
+    const est = a.fonte==='ESTADO';
+    const ifr = a.operacao && a.operacao.includes('IFR');
+    const i = DATA_ALL.indexOf(a);
+    const comp = parseInt(a.comprimento)||0;
+    return `<div class="card fade-in" onclick="abrirModal(${i})" style="animation-delay:${idx*.03}s">
+      <div class="card-stripe ${est?'estado':'publico'}"></div>
+      <div class="card-top">
+        <div class="card-ico ${est?'estado':'publico'}">✈️</div>
+        <div style="flex:1;min-width:0;">
+          <div class="card-nome">${a.nome}</div>
+          <div class="card-mun">📍 ${a.municipio}</div>
+          <div class="card-badges">
+            <span class="badge ${est?'badge-est':'badge-pub'}">${est?'SEINFRA':'Público'}</span>
+            <span class="badge ${ifr?'badge-ifr':'badge-vfr'}">${ifr?'IFR':'VFR'}</span>
+            <span class="badge ${a.rbac107==='AP-2'?'badge-ap2':a.rbac107==='AP-1'?'badge-ap1':'badge-ap0'}">${a.rbac107||'—'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-specs">
+        <div><div class="spec-lbl">Pista</div><div class="spec-val">${a.comprimento} × ${a.largura||'—'}</div></div>
+        <div><div class="spec-lbl">Superfície</div><div class="spec-val">${a.superficie||'—'}</div></div>
+        <div><div class="spec-lbl">Altitude</div><div class="spec-val">${a.altitude}</div></div>
+        <div><div class="spec-lbl">Cabeceiras</div><div class="spec-val">${a.pista_desig||'—'}</div></div>
+      </div>
+      <div class="card-foot">
+        <div class="card-ciad">${a.ciad||a.icao||'—'}</div>
+        ${a.portaria_link?`<a class="card-link" href="${a.portaria_link}" target="_blank" onclick="event.stopPropagation()">Portaria →</a>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── VIEW ──
+function setView(v) {
+  viewMode = v;
+  subFiltro = 'todos';
+  document.querySelectorAll('.mf-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.view === v);
+  });
+
+  // Update map markers
+  DATA_ALL.forEach(a => {
+    const grp = a.fonte==='ESTADO' ? marcadores_est : marcadores_pub;
+    // no direct group management, markers always visible
+  });
+
+  buildCharts();
+  buildSubFilters();
+  renderCards();
+}
+
+// ── MODAL ──
+function abrirModal(i) {
+  const a = DATA_ALL[i];
+  const est = a.fonte==='ESTADO';
+  const ifr = a.operacao && a.operacao.includes('IFR');
+  const comp = parseInt(a.comprimento)||0;
+  const maxPista = 2700;
+  const pct = Math.round(comp/maxPista*100);
+
+  document.getElementById('mHdr').className = `modal-hdr ${est?'estado':'publico'}`;
+  document.getElementById('mIcao').textContent = a.icao||'—';
+  document.getElementById('mCiad').textContent = a.ciad ? `CIAD ${a.ciad}` : '';
+  document.getElementById('mSep').style.display = (a.icao && a.ciad) ? 'block' : 'none';
+  document.getElementById('mTitle').textContent = a.nome;
+  document.getElementById('mMun').textContent = '📍 ' + a.municipio;
+  document.getElementById('mBadges').innerHTML = `
+    <span class="badge ${est?'badge-est':'badge-pub'}">${est?'SEINFRA/Estado':'Público'}</span>
+    <span class="badge ${ifr?'badge-ifr':'badge-vfr'}">${a.operacao||'VFR'}</span>
+    <span class="badge ${a.rbac107==='AP-2'?'badge-ap2':a.rbac107==='AP-1'?'badge-ap1':'badge-ap0'}">${a.rbac107||'—'}</span>
+    ${a.rbac153?`<span class="badge badge-vfr">${a.rbac153}</span>`:''}
+  `;
+
+  document.getElementById('mBody').innerHTML = `
+    <div class="ms-title">Especificações Técnicas</div>
+    <div class="pista-vis">
+      <div class="pista-desig">Pista ${a.pista_desig||'—'}</div>
+      <div class="pista-bar-wrap">
+        <div class="pista-bar" style="width:${pct}%;background:${est?'linear-gradient(90deg,#7b2d8b,#4a1060)':'linear-gradient(90deg,#002D72,#00348A)'}">
+          ${comp.toLocaleString()} m
+        </div>
+      </div>
+      <div class="pista-lbl"><span>${comp.toLocaleString()} m comprimento</span><span>${a.largura||'—'} largura</span></div>
+    </div>
+    <div class="mg3">
+      <div><div class="mf-lbl">Superfície</div><div class="mf-val">${a.superficie||'—'}</div></div>
+      <div><div class="mf-lbl">Resistência</div><div class="mf-val" style="font-size:.75rem">${a.resistencia||'—'}</div></div>
+      <div><div class="mf-lbl">Altitude AMSL</div><div class="mf-val">${a.altitude}</div></div>
+    </div>
+
+    <div class="ms-title">Classificação Normativa</div>
+    <div class="mg">
+      <div><div class="mf-lbl">Classe RBAC 107</div><div class="mf-val">${a.rbac107||'—'}</div></div>
+      <div><div class="mf-lbl">Classe RBAC 153</div><div class="mf-val">${a.rbac153||'—'}</div></div>
+      <div><div class="mf-lbl">Categoria Tarifária</div><div class="mf-val">${a.cat_tar||'Não tarifado'}</div></div>
+      <div><div class="mf-lbl">Aeronave Crítica</div><div class="mf-val">${a.aeronave||'—'}</div></div>
+    </div>
+
+    <div class="ms-title">Identificação e Coordenadas</div>
+    <div class="mg">
+      <div><div class="mf-lbl">Código OACI/ICAO</div><div class="mf-val mono">${a.icao||'—'}</div></div>
+      <div><div class="mf-lbl">CIAD</div><div class="mf-val mono">${a.ciad||'—'}</div></div>
+      <div><div class="mf-lbl">Latitude</div><div class="mf-val mono">${a.lat.toFixed(5)}°</div></div>
+      <div><div class="mf-lbl">Longitude</div><div class="mf-val mono">${a.lon.toFixed(5)}°</div></div>
+    </div>
+
+    ${a.portaria_link?`
+    <div class="ms-title">Ato Normativo</div>
+    <a class="m-portaria ${est?'':'pub'}" href="${a.portaria_link}" target="_blank">📄 ${a.portaria} — Consultar na ANAC</a>
+    `:''}
+
+    ${a.observacoes?`<div class="m-obs">⚠️ <strong>Medida Administrativa:</strong> ${a.observacoes}</div>`:''}
+
+    <div style="margin-top:1.25rem;padding:1rem;background:${est?'var(--roxo-cl)':'var(--azul-cl)'};border-radius:10px;font-size:.78rem;color:${est?'var(--roxo)':'var(--azul)'};line-height:1.6;border:1px solid ${est?'var(--roxo-brd)':'var(--azul-brd)'};">
+      <strong>Sobre a gestão:</strong> ${est
+        ? 'Aeródromo sob gestão direta da SEINFRA/AM. A Secretaria é titular da outorga perante a ANAC e responsável pela manutenção, operação e adequação às regulamentações vigentes.'
+        : 'Aeródromo público do Amazonas com outorga de titularidade municipal ou federal. Todos os aeródromos públicos do Estado estão inseridos na Amazônia Legal.'
+      }
+    </div>
+  `;
+
+  document.getElementById('modalOv').classList.add('open');
+  mapa.setView([a.lat, a.lon], 10);
+}
+
+document.getElementById('mcls').addEventListener('click', () => document.getElementById('modalOv').classList.remove('open'));
+document.getElementById('modalOv').addEventListener('click', e => { if(e.target===document.getElementById('modalOv')) document.getElementById('modalOv').classList.remove('open'); });
+document.getElementById('searchInput').addEventListener('input', e => { buscaAtiva=e.target.value; renderCards(); });
+
+// ── INIT ──
+buildCharts();
+buildSubFilters();
+renderCards();
+</script>
+</body>
+</html>
